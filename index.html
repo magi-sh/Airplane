@@ -149,7 +149,7 @@ function createObstacle() {
 
 // Draw obstacles
 function drawObstacles() {
-  ctx.fillStyle = '#3b0423';
+  ctx.fillStyle = '#e60e47';
   obstacles.forEach(obs => {
     ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
     ctx.fillRect(obs.x, obs.gapY, obs.width, canvas.height - obs.gapY);
