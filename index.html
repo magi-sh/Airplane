@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Magarsa shibiru</title>
+<style>
+  canvas {
+    background-color: #08abd4;
+    display: block;
+    margin: 0 auto;
+  }
+  /* Style control buttons for mobile */
+  #controls {
+    position: fixed;
+    bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    z-index: 10;
+  }
+  button {
+    padding: 15px 30px;
+    font-size: 20px;
+    border: none;
+    border-radius: 10px;
+    background-color: #8c0348;
+    cursor: pointer;
+    user-select: none;
+  }
+  button:active {
+    background-color: #8c0348;
+  }
+  /* Style footer to sit just above control buttons */
+  footer {
+    position: fixed;
+    bottom: -8px; /* position it just above the controls */
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    background-color: #038c3c;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="1400" height="746"></canvas>
+
+<!-- Control Buttons for Mobile -->
+<div id="controls">
+  <button id="upButton">Up</button>
+  <button id="downButton">Down</button>
+</div>
+
+<!-- Footer with copyright -->
+<footer>
+  &copy; 2025 by Magarsa Shibiru.
+</footer>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Airplane properties
+let airplane = {
+  x: 100,
+  y: 180,
+  width: 100,
+  height: 60,
+  dy: 0
+};
+
+let obstacles = [];
+let frameCount = 0;
+let score = 0;
+let gameOver = false;
+
+// Handle key press for desktop
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'ArrowUp') {
+    airplane.dy = -5;
+  } else if (e.code === 'ArrowDown') {
+    airplane.dy = 5;
+  }
+});
+
+document.addEventListener('keyup', function(e) {
+  if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+    airplane.dy = 0;
+  }
+});
+
+// Handle touch controls for mobile
+const upButton = document.getElementById('upButton');
+const downButton = document.getElementById('downButton');
+
+upButton.addEventListener('touchstart', () => { airplane.dy = -5; });
+upButton.addEventListener('touchend', () => { if (airplane.dy === -5) airplane.dy = 0; });
+upButton.addEventListener('touchcancel', () => { if (airplane.dy === -5) airplane.dy = 0; });
+
+downButton.addEventListener('touchstart', () => { airplane.dy = 5; });
+downButton.addEventListener('touchend', () => { if (airplane.dy === 5) airplane.dy = 0; });
+downButton.addEventListener('touchcancel', () => { if (airplane.dy === 5) airplane.dy = 0; });
+
+// Prevent scrolling on touch
+upButton.addEventListener('touchmove', e => e.preventDefault());
+downButton.addEventListener('touchmove', e => e.preventDefault());
+
+// Function to draw a simple airplane shape
+function drawAirplane() {
+  ctx.save();
+  ctx.translate(airplane.x + airplane.width/2, airplane.y + airplane.height/2);
+  ctx.fillStyle = 'white';
+
+  // Draw body (triangle)
+  ctx.beginPath();
+  ctx.moveTo(0, -20);
+  ctx.lineTo(40, 0);
+  ctx.lineTo(0, 20);
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw wings
+  ctx.fillStyle = 'gray';
+  ctx.fillRect(-10, -10, 20, 5); // wing left
+  ctx.fillRect(-10, 5, 20, 5);   // wing right
+
+  // Draw tail
+  ctx.fillRect(35, -5, 10, 10);
+
+  ctx.restore();
+}
+
+// Create obstacles
+function createObstacle() {
+  const height = Math.random() * 100 + 50;
+  const gap = 150;
+  obstacles.push({
+    x: 600,
+    y: 0,
+    width: 20,
+    height: height,
+    gapY: height + gap
+  });
+}
+
+// Draw obstacles
+function drawObstacles() {
+  ctx.fillStyle = '#3b0423';
+  obstacles.forEach(obs => {
+    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+    ctx.fillRect(obs.x, obs.gapY, obs.width, canvas.height - obs.gapY);
+  });
+}
+
+// Collision detection
+function checkCollision() {
+  for (let obs of obstacles) {
+    if (
+      airplane.x < obs.x + obs.width &&
+      airplane.x + airplane.width > obs.x &&
+      (airplane.y < obs.height || airplane.y + airplane.height > obs.gapY)
+    ) {
+      gameOver = true;
+    }
+  }
+}
+
+// Update game state
+function update() {
+  if (gameOver) return;
+
+  frameCount++;
+  airplane.y += airplane.dy;
+
+  if (airplane.y < 0) airplane.y = 0;
+  if (airplane.y + airplane.height > canvas.height)
+    airplane.y = canvas.height - airplane.height;
+
+  if (frameCount % 90 === 0) {
+    createObstacle();
+  }
+
+  obstacles.forEach(obs => {
+    obs.x -= 2;
+  });
+
+  if (obstacles.length && obstacles[0].x + obstacles[0].width < 0) {
+    obstacles.shift();
+    score++;
+  }
+
+  checkCollision();
+}
+
+// Draw everything
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawAirplane();
+  drawObstacles();
+  ctx.fillStyle = 'black';
+  ctx.font = '20px Arial';
+  ctx.fillText('Score: ' + score, 10, 20);
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = '40px Arial';
+    ctx.fillText('Game Over', 200, 200);
+  }
+}
+
+// Main game loop
+function gameLoop() {
+  update();
+  draw();
+  if (!gameOver) {
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+// Start game after setting up
+gameLoop();
+
+</script>
+</body>
+</html>
